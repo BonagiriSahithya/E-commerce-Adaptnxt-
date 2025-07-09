@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>E-commerce API Frontend</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 1000px;
+      margin: auto;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+
+    h1, h2 {
+      color: #2c3e50;
+    }
+
+    section {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      box-sizing: border-box;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    .row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .col {
+      flex: 1;
+      min-width: 300px;
+    }
+
+    #products p {
+      padding: 6px;
+      border-bottom: 1px solid #eee;
+    }
+
+    #cart {
+      white-space: pre-wrap;
+      background: #f3f3f3;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    hr {
+      margin: 40px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🛒 Simple E-commerce Frontend</h1>
+
+  <section>
+    <h2>Register</h2>
+    <input type="text" id="regUsername" placeholder="Username" />
+    <input type="password" id="regPassword" placeholder="Password" />
+    <select id="regRole">
+      <option value="customer">Customer</option>
+      <option value="admin">Admin</option>
+    </select>
+    <button onclick="register()">Register</button>
+  </section>
+
+  <section>
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+  </section>
+
+  <section>
+    <h2>Product Listing</h2>
+    <input type="text" id="search" placeholder="Search Products" />
+    <button onclick="fetchProducts()">Fetch Products</button>
+    <div id="products"></div>
+  </section>
+
+  <section>
+    <h2>Add to Cart</h2>
+    <input type="text" id="productId" placeholder="Product ID" />
+    <input type="number" id="quantity" placeholder="Quantity" value="1" />
+    <button onclick="addToCart()">Add to Cart</button>
+  </section>
+
+  <section>
+    <h2>View Cart</h2>
+    <button onclick="viewCart()">Get Cart</button>
+    <div id="cart"></div>
+  </section>
+
+  <section>
+    <h2>Place Order</h2>
+    <button onclick="placeOrder()">Place Order</button>
+  </section>
+
+  <section>
+    <h2>Admin - Product Management</h2>
+    <select id="adminProductIdDropdown">
+      <option value="">Select Product</option>
+    </select>
+
+    <input type="text" id="adminProductName" placeholder="Product Name" />
+    <input type="text" id="adminProductDesc" placeholder="Product Description" />
+    <input type="text" id="adminProductCategory" placeholder="Category" />
+    <input type="number" id="adminProductPrice" placeholder="Price" />
+
+    <div class="row">
+      <div class="col"><button onclick="addProduct()">Add Product</button></div>
+      <div class="col"><button onclick="updateProduct()">Update Product</button></div>
+      <div class="col"><button onclick="deleteProduct()">Delete Product</button></div>
+    </div>
+  </section>
+
+  <script>
+    const api = 'http://localhost:5000/api';
+    let token = '';
+
+    async function register() {
+      const username = document.getElementById('regUsername').value;
+      const password = document.getElementById('regPassword').value;
+      const role = document.getElementById('regRole').value;
+
+      const res = await fetch(`${api}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role })
+      });
+
+      if (res.ok) {
+        alert('Registration successful!');
+      }
+    }
+
+    async function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch(`${api}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+      if (data.token) {
+        token = data.token;
+        alert('Login successful!');
+      }
+    }
+
+    async function fetchProducts() {
+      const search = document.getElementById('search').value;
+      const res = await fetch(`${api}/products?search=${search}`);
+      const data = await res.json();
+
+      document.getElementById('products').innerHTML = data.map(p =>
+        `<p><strong>${p.name}</strong> - ₹${p.price} (ID: ${p._id})</p>`
+      ).join('');
+
+      const dropdown = document.getElementById('adminProductIdDropdown');
+      dropdown.innerHTML = '<option value="">Select Product</option>';
+      data.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p._id;
+        option.text = `${p.name} - ₹${p.price}`;
+        dropdown.appendChild(option);
+      });
+    }
+
+    async function addToCart() {
+      const productId = document.getElementById('productId').value;
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const res = await fetch(`${api}/cart/add`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ productId, quantity })
+      });
+      if (res.ok) {
+        alert('Product added to cart!');
+      }
+    }
+
+    async function viewCart() {
+      const res = await fetch(`${api}/cart`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      document.getElementById('cart').innerText = JSON.stringify(data, null, 2);
+    }
+
+    async function placeOrder() {
+      const res = await fetch(`${api}/orders`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        alert('Order placed successfully!');
+      }
+    }
+
+    async function addProduct() {
+      const name = document.getElementById('adminProductName').value;
+      const description = document.getElementById('adminProductDesc').value;
+      const category = document.getElementById('adminProductCategory').value;
+      const price = parseFloat(document.getElementById('adminProductPrice').value);
+
+      const res = await fetch(`${api}/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, description, category, price })
+      });
+
+      if (res.ok) {
+        alert('Product added successfully!');
+        fetchProducts();
+      }
+    }
+
+    async function updateProduct() {
+      const id = document.getElementById('adminProductIdDropdown').value.trim();
+      const name = document.getElementById('adminProductName').value.trim();
+      const description = document.getElementById('adminProductDesc').value.trim();
+      const category = document.getElementById('adminProductCategory').value.trim();
+      const price = parseFloat(document.getElementById('adminProductPrice').value);
+
+      if (!/^[a-f\d]{24}$/i.test(id)) {
+        alert("Invalid Product ID.");
+        return;
+      }
+
+      const res = await fetch(`${api}/products/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, description, category, price })
+      });
+
+      if (res.ok) {
+        alert('Product updated successfully!');
+        fetchProducts();
+      }
+    }
+
+    async function deleteProduct() {
+      const id = document.getElementById('adminProductIdDropdown').value.trim();
+
+      if (!/^[a-f\d]{24}$/i.test(id)) {
+        alert("Invalid Product ID.");
+        return;
+      }
+
+      const res = await fetch(`${api}/products/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        alert('Product deleted successfully!');
+        fetchProducts();
+      }
+    }
+
+    document.getElementById('adminProductIdDropdown').addEventListener('change', async function () {
+      const selectedId = this.value;
+      if (!selectedId) return;
+
+      const res = await fetch(`${api}/products/${selectedId}`);
+      const product = await res.json();
+
+      document.getElementById('adminProductName').value = product.name || '';
+      document.getElementById('adminProductDesc').value = product.description || '';
+      document.getElementById('adminProductCategory').value = product.category || '';
+      document.getElementById('adminProductPrice').value = product.price || '';
+    });
+  </script>
+</body>
+</html>
